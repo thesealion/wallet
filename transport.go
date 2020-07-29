@@ -98,11 +98,11 @@ func encodeError(_ context.Context, err error, w http.ResponseWriter) {
 
 func codeFrom(err error) int {
 	switch err {
-	case ErrCurrencyMismatch, ErrInsufficientBalance:
+	case ErrCurrencyMismatch, ErrInsufficientBalance, ErrInvalidAmount, ErrSameAccount:
 		return http.StatusForbidden
 	case ErrAccountNotFound:
 		return http.StatusNotFound
-	case ErrMalformedJson:
+	case ErrMalformedJson, ErrAccountNotSpecified:
 		return http.StatusBadRequest
 	default:
 		return http.StatusInternalServerError
