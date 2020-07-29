@@ -14,10 +14,12 @@ import (
 )
 
 var (
-	ErrMalformedJson = errors.New("unable to parse request")
+	// ErrMalformedJSON is an error of JSON decoding.
+	ErrMalformedJSON = errors.New("unable to parse request")
 )
 
-func MakeHTTPHandler(svc WalletService, logger log.Logger) http.Handler {
+// MakeHTTPHandler returns an HTTP handler for Service.
+func MakeHTTPHandler(svc Service, logger log.Logger) http.Handler {
 	r := mux.NewRouter()
 	options := []httptransport.ServerOption{
 		httptransport.ServerErrorHandler(transport.NewLogErrorHandler(logger)),
@@ -62,7 +64,7 @@ func decodeSendPaymentRequest(_ context.Context, r *http.Request) (interface{}, 
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if e := dec.Decode(&req); e != nil {
-		return nil, ErrMalformedJson
+		return nil, ErrMalformedJSON
 	}
 	return req, nil
 }
@@ -102,7 +104,7 @@ func codeFrom(err error) int {
 		return http.StatusForbidden
 	case ErrAccountNotFound:
 		return http.StatusNotFound
-	case ErrMalformedJson, ErrAccountNotSpecified:
+	case ErrMalformedJSON, ErrAccountNotSpecified:
 		return http.StatusBadRequest
 	default:
 		return http.StatusInternalServerError

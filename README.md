@@ -38,3 +38,17 @@ Clean up:
 ```
 docker-compose -f docker-compose-test.yml down
 ```
+
+## Code linting
+
+Install golint:
+
+```
+go get -u golang.org/x/lint/golint
+```
+
+Run:
+
+```
+~/go/bin/golint .
+```

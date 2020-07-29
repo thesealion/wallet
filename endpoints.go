@@ -7,7 +7,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func makeListAccountsEndpoint(svc WalletService) endpoint.Endpoint {
+func makeListAccountsEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		_ = request.(listAccountsRequest)
 		accounts, err := svc.ListAccounts(ctx)
@@ -15,7 +15,7 @@ func makeListAccountsEndpoint(svc WalletService) endpoint.Endpoint {
 	}
 }
 
-func makeListPaymentsEndpoint(svc WalletService) endpoint.Endpoint {
+func makeListPaymentsEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		_ = request.(listPaymentsRequest)
 		payments, err := svc.ListPayments(ctx)
@@ -38,7 +38,7 @@ func makeListPaymentsEndpoint(svc WalletService) endpoint.Endpoint {
 	}
 }
 
-func makeSendPaymentEndpoint(svc WalletService) endpoint.Endpoint {
+func makeSendPaymentEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(sendPaymentRequest)
 		err := svc.SendPayment(ctx, req.FromAccountID, req.ToAccountID, req.Amount)

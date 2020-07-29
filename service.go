@@ -6,15 +6,15 @@ import (
 	"os"
 
 	"github.com/go-kit/kit/log"
-	"github.com/jackc/pgx/v4"
-	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/jackc/pgtype"
 	shopspring "github.com/jackc/pgtype/ext/shopspring-numeric"
+	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/shopspring/decimal"
 )
 
-// WalletService provides operations with accounts and payments.
-type WalletService interface {
+// Service provides operations with accounts and payments.
+type Service interface {
 	// ListAccounts list all the accounts in the system.
 	ListAccounts(ctx context.Context) ([]*Account, error)
 
@@ -25,12 +25,14 @@ type WalletService interface {
 	SendPayment(ctx context.Context, fromAccountID, toAccountID string, amount decimal.Decimal) error
 }
 
+// Account is the main entity of the wallet service.
 type Account struct {
 	ID       string          `json:"id"`
 	Balance  decimal.Decimal `json:"balance"`
 	Currency string          `json:"currency"`
 }
 
+// Payment is the entity representing money transfers between accounts.
 type Payment struct {
 	ID            int
 	FromAccountID string
@@ -39,24 +41,38 @@ type Payment struct {
 }
 
 var (
-	ErrAccountNotFound     = errors.New("account(s) not found")
+	// Payment sending errors:
+
+	// ErrAccountNotFound indicates that one or both account IDs are not found.
+	ErrAccountNotFound = errors.New("account(s) not found")
+
+	// ErrAccountNotSpecified indicates that one or both account IDs are not specified in the request.
 	ErrAccountNotSpecified = errors.New("two accounts must be specified")
-	ErrCurrencyMismatch    = errors.New("accounts have different currencies")
+
+	// ErrCurrencyMismatch indicates that accounts have differenct currencies.
+	ErrCurrencyMismatch = errors.New("accounts have different currencies")
+
+	// ErrInsufficientBalance indicates that the sender account does not have enough money.
 	ErrInsufficientBalance = errors.New("insufficient balance")
-	ErrInvalidAmount       = errors.New("invalid amount")
-	ErrSameAccount         = errors.New("cannot send a payment to the same account")
+
+	// ErrInvalidAmount indicates that the requested amount is negative.
+	ErrInvalidAmount = errors.New("invalid amount")
+
+	// ErrSameAccount indicates an attempt to make a payment within the same account.
+	ErrSameAccount = errors.New("cannot send a payment to the same account")
 )
 
-// WalletService implementation using Postgres for storage.
-type walletService struct {
+// Service implementation using Postgres for storage.
+type service struct {
 	db *pgxpool.Pool
 }
 
-func NewWalletService(db *pgxpool.Pool) WalletService {
-	return &walletService{db}
+// NewWalletService creates a new service with Postgres storage.
+func NewWalletService(db *pgxpool.Pool) Service {
+	return &service{db}
 }
 
-// Connect to Postgres using pgx.
+// InitDB connects to Postgres using pgx.
 func InitDB() (*pgxpool.Pool, error) {
 	// Register decimal data type with pgx
 	config, _ := pgxpool.ParseConfig(os.Getenv("DATABASE_URL"))
@@ -70,9 +86,9 @@ func InitDB() (*pgxpool.Pool, error) {
 	}
 	dbpool, err := pgxpool.ConnectConfig(context.Background(), config)
 	if err != nil {
-        return nil, err
+		return nil, err
 	}
-    return dbpool, nil
+	return dbpool, nil
 }
 
 // Read accounts from DB into a slice
@@ -93,7 +109,7 @@ func getAccounts(rows pgx.Rows) ([]*Account, error) {
 	return accounts, nil
 }
 
-func (s *walletService) ListAccounts(ctx context.Context) ([]*Account, error) {
+func (s *service) ListAccounts(ctx context.Context) ([]*Account, error) {
 	rows, err := s.db.Query(ctx, "SELECT id, balance, currency FROM accounts ORDER BY id")
 	if err != nil {
 		return nil, err
@@ -101,7 +117,7 @@ func (s *walletService) ListAccounts(ctx context.Context) ([]*Account, error) {
 	return getAccounts(rows)
 }
 
-func (s *walletService) ListPayments(ctx context.Context) ([]*Payment, error) {
+func (s *service) ListPayments(ctx context.Context) ([]*Payment, error) {
 	payments := make([]*Payment, 0)
 	rows, err := s.db.Query(ctx, "SELECT id, from_account_id, to_account_id, amount FROM payments ORDER BY id")
 	if err != nil {
@@ -124,7 +140,7 @@ func (s *walletService) ListPayments(ctx context.Context) ([]*Payment, error) {
 	return payments, nil
 }
 
-func (s *walletService) SendPayment(ctx context.Context, fromAccountID, toAccountID string, amount decimal.Decimal) error {
+func (s *service) SendPayment(ctx context.Context, fromAccountID, toAccountID string, amount decimal.Decimal) error {
 	// Check parameters
 	if fromAccountID == "" || toAccountID == "" {
 		return ErrAccountNotSpecified
@@ -187,19 +203,19 @@ func (s *walletService) SendPayment(ctx context.Context, fromAccountID, toAccoun
 	return nil
 }
 
-// Service middleware type.
-type Middleware func(WalletService) WalletService
+// Middleware is the service middleware type.
+type Middleware func(Service) Service
 
-// Middleware to log service requests.
+// LoggingMiddleware is a middleware to log service requests.
 func LoggingMiddleware(logger log.Logger) Middleware {
-	return func(next WalletService) WalletService {
+	return func(next Service) Service {
 		return loggingMiddleware{logger, next}
 	}
 }
 
 type loggingMiddleware struct {
 	logger log.Logger
-	next   WalletService
+	next   Service
 }
 
 func (mw loggingMiddleware) ListAccounts(ctx context.Context) (accounts []*Account, err error) {
