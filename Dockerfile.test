@@ -1,0 +1,4 @@
+FROM golang:1.14.6-alpine
+WORKDIR /go/src/github.com/thesealion/wallet/
+COPY . .
+CMD CGO_ENABLED=0 go test .

@@ -3,10 +3,13 @@ package wallet
 import (
 	"context"
 	"errors"
+	"os"
 
 	"github.com/go-kit/kit/log"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/jackc/pgtype"
+	shopspring "github.com/jackc/pgtype/ext/shopspring-numeric"
 	"github.com/shopspring/decimal"
 )
 
@@ -51,6 +54,25 @@ type walletService struct {
 
 func NewWalletService(db *pgxpool.Pool) WalletService {
 	return &walletService{db}
+}
+
+// Connect to Postgres using pgx.
+func InitDB() (*pgxpool.Pool, error) {
+	// Register decimal data type with pgx
+	config, _ := pgxpool.ParseConfig(os.Getenv("DATABASE_URL"))
+	config.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
+		conn.ConnInfo().RegisterDataType(pgtype.DataType{
+			Value: &shopspring.Numeric{},
+			Name:  "numeric",
+			OID:   pgtype.NumericOID,
+		})
+		return nil
+	}
+	dbpool, err := pgxpool.ConnectConfig(context.Background(), config)
+	if err != nil {
+        return nil, err
+	}
+    return dbpool, nil
 }
 
 // Read accounts from DB into a slice

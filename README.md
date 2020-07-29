@@ -12,3 +12,25 @@ You can run the whole application along with the DB using Docker Compose:
 ```
 docker-compose up
 ```
+
+The DB is initially populated with three test accounts.
+
+## Running tests
+
+Start the database:
+
+```
+docker-compose -f docker-compose-test.yml up -d db
+```
+
+Run tests:
+
+```
+docker-compose -f docker-compose-test.yml up tests
+```
+
+Clean up:
+
+```
+docker-compose -f docker-compose-test.yml down
+```

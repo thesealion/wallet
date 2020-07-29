@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"net/http"
@@ -12,10 +11,6 @@ import (
 	"github.com/thesealion/wallet"
 
 	"github.com/go-kit/kit/log"
-	"github.com/jackc/pgtype"
-	shopspring "github.com/jackc/pgtype/ext/shopspring-numeric"
-	"github.com/jackc/pgx/v4"
-	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 func main() {
@@ -31,17 +26,7 @@ func main() {
 		logger = log.With(logger, "caller", log.DefaultCaller)
 	}
 
-	// Register decimal data type with pgx
-	config, _ := pgxpool.ParseConfig(os.Getenv("DATABASE_URL"))
-	config.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
-		conn.ConnInfo().RegisterDataType(pgtype.DataType{
-			Value: &shopspring.Numeric{},
-			Name:  "numeric",
-			OID:   pgtype.NumericOID,
-		})
-		return nil
-	}
-	dbpool, err := pgxpool.ConnectConfig(context.Background(), config)
+	dbpool, err := wallet.InitDB()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
 		os.Exit(1)
